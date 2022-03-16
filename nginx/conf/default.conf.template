@@ -1,0 +1,71 @@
+# Default website
+server {
+
+    listen 80            default_server;
+    server_name          ${GLOBAL_DOMAIN};
+
+    charset             utf-8;
+    root                /var/www/bitrix;
+    index               index.php;
+
+    access_log         /var/log/nginx/access.log main;
+    error_log          /var/log/nginx/error.log warn;
+
+    client_body_buffer_size ${MAX_BUF_SIZE};
+    client_max_body_size ${MAX_BODY_SIZE};
+
+    location / {
+        try_files $uri $uri/ @bitrix;
+    }
+
+    location ~ \.php$ {
+        try_files       $uri @bitrix;
+        fastcgi_pass    php-fpm:9000;
+        fastcgi_index   index.php;
+        include         fastcgi_params;
+        fastcgi_param   SERVER_PORT     ${SERVER_PORT};
+        fastcgi_param   SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    }
+
+    location @bitrix {
+        fastcgi_pass    php-fpm:9000;
+        include         fastcgi_params;
+        fastcgi_param   SERVER_PORT     ${SERVER_PORT};
+        fastcgi_param   SCRIPT_FILENAME $document_root/bitrix/urlrewrite.php;
+    }
+
+    # favicon
+    location = /favicon.ico {
+        log_not_found off;
+        access_log    off;
+    }
+
+    # robots.txt
+    location = /robots.txt {
+        log_not_found off;
+        access_log    off;
+    }
+
+    # assets, media
+    location ~* \.(?:css(\.map)?|js(\.map)?|jpe?g|png|gif|ico|cur|heic|webp|tiff?|mp3|m4a|aac|ogg|midi?|wav|mp4|mov|webm|mpe?g|avi|ogv|flv|wmv)$ {
+        expires    7d;
+        access_log off;
+        add_header Cache-Control public;
+        # re-add security header
+        add_header X-Content-Type-Options nosniff;
+    }
+
+    # svg, fonts
+    location ~* \.(?:svgz?|ttf|ttc|otf|eot|woff2?)$ {
+        add_header Access-Control-Allow-Origin "*";
+        expires    7d;
+        access_log off;
+        add_header Cache-Control public;
+        # re-add security header
+        add_header X-Content-Type-Options nosniff;
+    }
+
+    # Disable access for non-static assets (not js and css) in cache location and other locations
+    location ~* (/\.ht|/\.git|/\.gitignore|/\.bash|/\.sql|\.settings\.php|/composer|/bitrix/cache|/bitrix/backup|/bitrix/updates|/bitrix/modules|/bitrix/php_interface|/bitrix/stack_cache|/bitrix/managed_cache|/bitrix/html_pages/\.|/upload/1c_exchange|local/modules|local/php_interface|/logs/) { deny all; }
+
+}

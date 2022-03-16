@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  nginx:
+    image: nginx:1.21.1-alpine
+    container_name: nginx
+    ports:
+      - 80:80
+    volumes:
+      - ./bitrix:/var/www/bitrix
+    environment:
+      - GLOBAL_DOMAIN=${GLOBAL_DOMAIN}
+      - SERVER_PORT=${SERVER_PORT}
+      - MAX_BUF_SIZE=${MAX_BUF_SIZE}
+      - MAX_BODY_SIZE=${MAX_BODY_SIZE}
+      - BX_MYSQL_DATABASE=${MYSQL_DATABASE}
+      - BX_MYSQL_USER=${MYSQL_USER}
+      - BX_MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    restart: always
+
+  php-fpm:
+    image: php:7.4-fpm-alpine3.14
+    volumes:
+      - ./bitrix:/var/www/bitrix
+    extra_hosts:
+      - "${GLOBAL_DOMAIN}:172.17.0.1"
+    restart: always
+
+  mysql:
+    image: percona:5.7-centos
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - TZ=Europe/Moscow
+    volumes:
+      - ./mysql/config/z_bx_custom.cnf:/etc/my.cnf.d/z_bx_custom.cnf
+      - ./mysql/data:/var/lib/mysql
+      - ./mysql/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+    ports:
+      - 3306:3306
+    restart: always
+
+networks:
+  default:
